@@ -80,6 +80,9 @@ func parseMethodString(rpcMethod string) (string, string) {
 		receiver = parts[0]
 		method = parts[1]
 	}
+
+	method = uppercaseFirst(method)
+
 	return receiver, method
 }
 
