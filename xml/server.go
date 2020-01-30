@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/rpc"
 )
@@ -26,12 +27,19 @@ func NewCodec() *Codec {
 
 // Codec creates a CodecRequest to process each request.
 type Codec struct {
-	aliases map[string]string
+	aliases          map[string]string
+	fallbackReceiver string
 }
 
 // RegisterAlias creates a method alias
 func (c *Codec) RegisterAlias(alias, method string) {
 	c.aliases[alias] = method
+}
+
+// RegisterFallbackReceiver registers a fallback receiver if none is specified
+// in the XMLRPC request
+func (c *Codec) RegisterFallbackReceiver(receiver string) {
+	c.fallbackReceiver = receiver
 }
 
 // NewRequest returns a CodecRequest.
@@ -50,6 +58,14 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	if method, ok := c.aliases[request.Method]; ok {
 		request.Method = method
 	}
+	// Fall back to a DefaultReceiver.Method if Method doesn't have Receiver.Method format.
+	parts := strings.Split(request.Method, ".")
+	if len(parts) != 2 {
+		if c.fallbackReceiver != "" {
+			request.Method = fmt.Sprintf("%s.%s", c.fallbackReceiver, request.Method)
+		}
+	}
+
 	return &CodecRequest{request: &request}
 }
 
