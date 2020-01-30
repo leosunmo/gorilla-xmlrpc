@@ -58,15 +58,29 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	if method, ok := c.aliases[request.Method]; ok {
 		request.Method = method
 	}
+
+	receiver, method := parseMethodString(request.Method)
 	// Fall back to a DefaultReceiver.Method if Method doesn't have Receiver.Method format.
-	parts := strings.Split(request.Method, ".")
-	if len(parts) != 2 {
+	if receiver == "" {
 		if c.fallbackReceiver != "" {
-			request.Method = fmt.Sprintf("%s.%s", c.fallbackReceiver, request.Method)
+			receiver = c.fallbackReceiver
 		}
 	}
 
+	request.Method = fmt.Sprintf("%s.%s", receiver, method)
 	return &CodecRequest{request: &request}
+}
+
+func parseMethodString(rpcMethod string) (string, string) {
+	parts := strings.Split(rpcMethod, ".")
+	var receiver, method string
+	if len(parts) != 2 {
+		method = parts[0]
+	} else {
+		receiver = parts[0]
+		method = parts[1]
+	}
+	return receiver, method
 }
 
 // ----------------------------------------------------------------------------
